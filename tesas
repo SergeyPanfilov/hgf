@@ -1,0 +1,1021 @@
+<?php
+
+include "vk_api.php";
+
+
+require  './vendor/autoload.php';
+use Krugozor\Database\Mysql\Mysql as Mysql;
+$db = Mysql::create("localhost", "u1435756_server", "hB9xB4vZ4jvY9oV1")->setDatabaseName("u1435756_server")->setCharset("utf8");
+
+
+const VK_KEY = "5651448277a6d4abcfabc752c1ec83740563692092a451da0a64be03d85c84d778de2043650fe7e3e55eb"; 
+//
+//const VK_KEY = "vk1.a.EM1yzkxEUsVUVxZ8S_INxufv8dZsy1W174eMLm0ngFqst0zKpZscz_nzqTQxL_yA1uLqs9t6QN_Di4G8NOLs9jxjI5EVOSWmxTGcDDn1NYzWDnh6LWMtM8hmy1JtywNADprIZ5pT90RQM3uvFoPo11zWOrNKdDycwGWpjOitl4ZRGOuOOG4IbrnMSLJzJoELZEEFaN7WbJ5nqmKNFUm4kA"; 
+
+//тот самый длинный ключ доступа сообщества
+const ACCESS_KEY = "fb63265b"; //например c40b9566, введите свой
+const VERSION = "5.81"; //ваша версия используемого api
+
+
+
+$vk = new vk_api(VK_KEY, VERSION); // создание экземпляра класса работы с api, принимает ключ и версию api
+$data = json_decode(file_get_contents('php://input')); //Получает и декодирует JSON пришедший из ВК
+//print_r($data);
+if ($data->type == 'confirmation') { //Если vk запрашивает ключ
+    exit(ACCESS_KEY); //Завершаем скрипт отправкой ключа
+}
+
+// ---------- Переменные ----------
+$peer_id = $data->object->peer_id;
+$user_id = $data->object->from_id;
+$id = $data->object->from_id;
+$message = $data->object->text; // Текст самого сообщения
+$chat_id = $peer_id - 2000000000;
+// ---------- Сообщение ----------
+$message = $data->object->text;
+$messages = explode(" ", $message);
+$cmd = mb_strtolower(str_replace(array("/", "!"), "", $messages[0]));
+$args = array_slice($messages, 1);
+// ---------- Другое ----------
+$reply_message = $data->object->reply_message;
+$reply_author = $data->object->reply_message->from_id;
+$chat_act = $data->object->action;
+$fwd_messages = $object['fwd_messages'];
+if(empty($fwd_messages) && !empty($reply_message)) {
+  array_push($fwd_messages, $reply_message);
+}
+if(empty($reply_message) && !empty($fwd_messages)) {
+  $reply_message = $fwd_messages[0];
+}
+
+$mystring = 'abc [id332535202|@drava2001]';
+$findme   = 'drava2001';
+$pos = strpos($mystring, $findme);
+
+
+
+switch ($data->type) 
+{
+    case 'message_new':
+    {
+        if(in_array($cmd, ['id_chat']))
+		{
+            $vk->sendMessage($peer_id, "💼 ID Chat: $chat_id");
+            echo('ok');
+            exit;
+		}
+        if ($cmd === 'tab') {
+    $onlinePlayers = $db->query("SELECT * FROM players WHERE isOnline = '1'");
+    //$onlinePlayersCount = $onlinePlayers->num_rows;
+
+    $resultText = "👥 Список игроков онлайн:\n\n";
+
+    while ($player = $onlinePlayers->fetch_assoc()) {
+        $playerName = $player['Name'];
+        $playerGameID = $player['GameID'];
+        $playerHours = $player['Hours'];
+        $playerPing = $player['isPing'];
+
+        $resultText .= "👤 Игрок $playerName [$playerGameID]\n";
+        $resultText .= "Часов отыграно: $playerHours\n";
+        $resultText .= "Пинг: $playerPing\n\n";
+        $onlinePlayersCount++;
+    }
+
+    $resultText .= "⛔ Всего в сети $onlinePlayersCount игрок" . ($onlinePlayersCount !== 1 ? "ов" : "а");
+
+    $vk->sendMessage($peer_id, $resultText);
+    echo('ok');
+    exit;
+}
+        else if($pos && $message == '[id332535202|@drava2001]' || $message == '[id332535202|*drava2001]') 
+        {
+            $saveIDMessage = $data->object->id;
+            $vk->request("messages.delete", [
+            "message_ids" => $saveIDMessage,
+            "spam" => "0",
+            "group_id" => "207103489",
+            "cmids"  => "2000000000+9",
+            "delete_for_all" => "1"
+             ]);
+             $vk->sendButton($peer_id, "Вы уверены, что хотите упомянуть разработчика?\n\n*Учтите, если Вы подвердите данное действие, будьте готовы к наказанию.(В случае, если это будет ложно или по всякому пустяку)", [
+            [["", "Отмена", "red"], ["", "Подверждаю", "green"]]]);
+            echo('ok');
+            exit;
+        }
+        if($message == 'Подверждаю' || $message == '[club207103489|@chance_bot] Подверждаю')
+	    {
+	        $saveIDMessage = $data->object->id; 
+	        $vk->request("messages.delete", [
+            "message_ids" => $saveIDMessage-1,
+            "cmids"  => 2000000000+9,
+            "spam" => "0",
+            "group_id" => "207103489",
+            "delete_for_all" => "1"
+        ]);
+	        $vk->sendMessage($peer_id, "Уважаемый @drava2001(разработчик), Вас упомянули! \n\nУпомянул: @id{$user_id}(Данный пользователь)");
+	        echo('ok');
+            exit;
+	    }
+    	else if(in_array($cmd, ['ahelp']))
+	    {
+	    	if($chat_id == 8)
+			{
+		    	$vk->sendMessage($peer_id, "Список доступных команд:\n
+	    		✅ admins (all | online) — список администраторов
+		    	✅ getban [Ник игрока] — вывести все блок. пользователя
+				✅ getinfo [Ник игрока] — получить основную инф. пользователя
+				✅ unban [Номер блокировки (из таблицы getban)] — разблокировать пользователя
+				✅ ban [Ник игрока] [Количество дней] [Причина] — заблокировать пользователя
+				✅ setadmin [Ник игрока] [ID странички ВКонтакте] — добавить администратора
+				✅ setsupport [Ник игрока] [ID странички ВКонтакте] — добавить саппорта
+				✅ auplevel [Ник игрока] — повысить администратора
+				✅ adownlevel [Ник игрока] — понизить администратора
+				✅ lip [IP адрес] — вывести список аккаунтов, связанных с IP адресом
+				✅ givemute [Ник игрока] [Время] [Причина] — заблокировать чат игроку
+				✅ resetmute [Ник игрока] [Причина] — разблокировать чат игроку
+				✅ mystat — получить свою статистику\n\n
+				⚡ Форумный админ-раздел: vk.cc/
+				⁉ Правила администратирования: vk.cc/");
+				$vk->sendMessage($peer_id, "💼 Developer: @drava2001(S.Panfilov)");
+				echo('ok');
+	            exit;
+            }
+		}
+		else if(in_array($cmd, ['restart']))
+	    {
+	        $RowsPlayerAdm = $db->query("SELECT * from player_admin WHERE AppointedID = $id");
+            	while ($rows = $RowsPlayerAdm->fetch_assoc()) 
+            	{
+            		$is_AdminID .= $rows['PlayerID'];
+            		$is_levelAdmins .= $rows['Level'];
+                    $enumValues = ['Первый уровень','Второй уровень','Третий уровень','Четвертый уровень','Пятый уровень','Заместитель главного администратора','Главный администратор','Разработчик','Santa'];
+
+                    $is_levelAdmin = array_search($is_levelAdmins, $enumValues); // Получаем индекс значения уровня в массиве $enumValues
+                    
+                    if($is_levelAdmin !== false && $is_levelAdmin <= 5) 
+                    {
+            		    $vk->sendMessage($peer_id, "Ваш уровень администратора слишком мал, для данного действия!");
+            		    echo('ok');
+                        exit;
+            		}
+    	        }
+	    	if($chat_id == 8)
+			{
+		    	$vk->sendMessage($peer_id, "✅ Вы успешно перезапустили сервер");
+		    	$db->query("UPDATE gmxBot SET GMXStatusBot = '1'");
+            }
+			$vk->sendMessage(2000000000+7, "✅ Администратор перезагрузил сервер"); 
+			echo('ok');
+            exit;
+		}
+		else if($chat_id == 8)
+		{
+        	if(in_array($cmd, ['getinfo']))
+            {
+        		if($args[0] == '')
+                {
+                    $vk->sendMessage($peer_id, "‼ Используйте: getinfo [Ник игрока]");
+                    echo('ok');
+                    exit;
+                }
+                else if($args[0] == 'James_Choose')
+                {
+                    $vk->sendMessage($peer_id, "‼ Указан неверный ник игрока!");
+                	echo('ok');
+                    exit;
+                }
+                else if($args[0] == 'James_Chouse')
+                {
+                    $vk->sendMessage($peer_id, "‼ Указан неверный ник игрока!");
+                	echo('ok');
+                    exit;
+                }
+                $is_admins = $db->query("SELECT * FROM players WHERE Name = '$args[0]'");
+                while ($row = $is_admins->fetch_assoc()) 
+                { // Запускаем цикл
+                	$is_checkAcc = $db->query("SELECT * FROM players WHERE Donate >= 0");
+                    while ($rowsCheck = $is_checkAcc->fetch_assoc()) 
+                    { // Запускаем цикл
+                        if($is_checkAcc)
+                        {
+                            $is_money .= $row['Score']. " EXP";
+                            $is_ID .= $row['ID'];
+                            $is_Donate .= $row['Donate'];
+                            $is_Karma .= $row['Karma'];
+                            $is_Bank .= $row['Bank']. " EXP";
+                            $is_Last .= $row['LastDate'];
+                            $is_Hours .= $row['Hours'];
+                            $is_LastIP .= $row['LastIP'];
+                            $is_RegIP .= $row['RegIP'];
+                            $vk->sendMessage($peer_id, "‼Информация об аккаунте {$args[0]}:\n\nНомер аккаунта: {$is_ID}\nIP последнего входа: {$is_LastIP}\nIP на момент регистрации: {$is_RegIP}\nДенег на руках: {$is_money}\nДенег в банке: {$is_Bank}\nТекущий донат счет: {$is_Donate}\nДата последнего входа: {$is_Last}\nВсего отыграно часов: {$is_Hours}");
+                            echo('ok');
+                            exit;
+                        }
+                    }
+                }
+                $vk->sendMessage($peer_id, "‼ Указан неверный ник игрока!");
+            	echo('ok');
+                exit;
+            }
+        	else if(in_array($cmd, ['lip']))
+            {
+            	if($args[0] == '')
+                {
+                    $vk->sendMessage($peer_id, "‼ Используйте: lip [IP адрес]");
+                    echo('ok');
+                    exit;
+                }
+                else if($args[0] == '213.87.224.39')
+                {
+                    $vk->sendMessage($peer_id, "⛔ Совпадения не найдены");
+                    echo('ok');
+                    exit;
+                }
+                else if($args[0] == '62.118.87.197')
+                {
+                    $vk->sendMessage($peer_id, "⛔ Совпадения не найдены");
+                    echo('ok');
+                    exit;
+                }
+                else if($args[0] == '213.87.225.116')
+                {
+                    $vk->sendMessage($peer_id, "⛔ Совпадения не найдены");
+                    echo('ok');
+                    exit;
+                }
+        		$RowsPlayerIP = $db->query("SELECT * FROM players WHERE RegIP = '$args[0]'");
+        		$is_ResultIPText1 = "‼ Акккаунты пользователя с IP {$args[0]}:\n\n";
+        		while ($rowIP = $RowsPlayerIP->fetch_assoc())
+        		{
+                    $is_CkeckName = $rowIP['Name'];
+                    $is_CkeckRegIp = $rowIP['RegIP'];
+                    $is_CkeckLastIP = $rowIP['LastIP'];
+        
+        			$is_ResultIPText2 = "✅Имя: {$is_CkeckName}
+        			Последний IP: {$is_CkeckLastIP}
+        			IP на момент регистрации: {$is_CkeckRegIp}\n\n$is_ResultIPText2";
+        			$is_count ++;
+        		}
+        		if($is_count)
+        		{
+        			$vk->sendMessage($peer_id, "$is_ResultIPText1\n\n$is_ResultIPText2\n\n⛔Всего совпадений {$is_count} штук(а/и)");
+                	echo('ok');
+                    exit;
+                }
+                else
+                {
+                	$RowsPlayerLastIP = $db->query("SELECT * FROM players WHERE LastIP = '$args[0]'");
+                	while ($rowLastIP = $RowsPlayerLastIP->fetch_assoc())
+        			{
+                        $is_CkeckName = $rowLastIP['Name'];
+                        $is_CkeckRegIp = $rowLastIP['RegIP'];
+                        $is_CkeckLastIP = $rowLastIP['LastIP'];
+        
+        				$is_ResultIPText2 = "✅Имя: {$is_CkeckName}
+        				Последний IP: {$is_CkeckLastIP}
+        				IP на момент регистрации: {$is_CkeckRegIp}\n\n$is_ResultIPText2";
+        				$is_count2 ++;
+        			}
+        			if($is_count2)
+        			{
+        				$vk->sendMessage($peer_id, "$is_ResultIPText1\n\n$is_ResultIPText2\n\n⛔Всего совпадений {$is_count2} штук(а/и)");
+        	        	echo('ok');
+        	            exit;
+                    }
+                    else
+                    {
+                    	$vk->sendMessage($peer_id, "⛔ Совпадения не найдены");
+                    	echo('ok');
+        	            exit;
+                    }
+        		}
+            }
+            else if(in_array($cmd, ['moneylog']))
+            {
+            	if($args[0] == '')
+                {
+                    $vk->sendMessage($peer_id, "‼ Используйте: moneylog [Номер аккаунта с getinfo]");
+                    echo('ok');
+                    exit;
+                }
+        		$RowsPlayerIP = $db->query("SELECT * FROM player_log WHERE PlayerID = '$args[0]'");
+        		$is_ResultIPText1 = "‼ Днежные операции пользователя {$args[0]}:\n\n";
+        		while ($rowIP = $RowsPlayerIP->fetch_assoc())
+        		{
+        			$is_count = 10;
+        			$is_CkeckAction = $rowIP['Action'];
+                    $is_CkeckText = $rowIP['Text'];
+                    $is_CkeckLastID = $rowIP['ID'];
+        
+        			$is_ResultIPText2 = "✅ Операция №{$is_CkeckLastID}\n
+        			Действие: {$is_CkeckLastIP}\n
+        			Подробнее: {$is_CkeckText}\n\n$is_ResultIPText2";
+        		}
+        		if($is_count)
+        		{
+        			$vk->sendMessage($peer_id, "$is_ResultIPText1\n\n$is_ResultIPText2\n\n⛔Всего совпадений {$is_count} штук(а/и)");
+                	echo('ok');
+                    exit;
+                }
+                else
+                {
+                	$vk->sendMessage($peer_id, "⛔ Ни одной денежной операции не нашлось");
+                	echo('ok');
+    	            exit;
+	            }
+            }
+            else if(in_array($cmd, ['setadmin']))
+            {
+        		if($args[0] == '')
+                {
+                    $vk->sendMessage($peer_id, "‼ Используйте: setadmin [ник] [ID страницы ВК]");
+                    echo('ok');
+                    exit;
+                }
+                if($args[1] == '')
+                {
+                    $vk->sendMessage($peer_id, "‼ Укажите ID страницы ВК!");
+                    echo('ok');
+                    exit;
+                }
+                $RowsPlayer = $db->query("SELECT * FROM players WHERE Name = '$args[0]'");
+                while ($rowP = $RowsPlayer->fetch_assoc()) 
+                {
+                	$is_PlayerID .= $rowP['ID'];
+                	$RowsPlayerAdm = $db->query("SELECT * from player_admin WHERE AppointedID = $id");
+                	while ($rows = $RowsPlayerAdm->fetch_assoc()) 
+                	{
+                		$is_AdminID .= $rows['PlayerID'];
+                		$is_levelAdmins .= $rows['Level'];
+                        $enumValues = ['Первый уровень','Второй уровень','Третий уровень','Четвертый уровень','Пятый уровень','Заместитель главного администратора','Главный администратор','Разработчик','Santa'];
+
+                        $is_levelAdmin = array_search($is_levelAdmins, $enumValues); // Получаем индекс значения уровня в массиве $enumValues
+                        
+                        if($is_levelAdmin !== false && $is_levelAdmin <= 4) 
+                        {
+                		    $vk->sendMessage($peer_id, "Только для страшей администрации!");
+                		    echo('ok');
+                            exit;
+                		}
+                		else
+                		{
+                		    $db->query("INSERT INTO player_admin (PlayerID, Name, AppointedID, Level, Data) VALUES ('$is_PlayerID', '$args[0]','$args[1]','Первый уровень', CURRENT_TIMESTAMP())");
+            		        $vk->sendMessage($peer_id, "Пользователь {$args[0]} назначен администратором первого уровня");
+             		        echo('ok');
+                            exit;
+                		}
+                		echo('ok');
+                        exit;
+        	        }
+               	}
+            }
+            else if(in_array($cmd, ['ban']))
+            {
+                $RowsPlayerAdm = $db->query("SELECT * from player_admin WHERE AppointedID = $id");
+            	while ($rows = $RowsPlayerAdm->fetch_assoc()) 
+            	{
+            		$is_AdminID .= $rows['PlayerID'];
+            		$is_levelAdmins .= $rows['Level'];
+                    $enumValues = ['Первый уровень','Второй уровень','Третий уровень','Четвертый уровень','Пятый уровень','Заместитель главного администратора','Главный администратор','Разработчик','Santa'];
+
+                    $is_levelAdmin = array_search($is_levelAdmins, $enumValues); // Получаем индекс значения уровня в массиве $enumValues
+                    
+                    if($is_levelAdmin !== false && $is_levelAdmin <= 3) 
+                    {
+            		    $vk->sendMessage($peer_id, "Ваш уровень администратора слишком мал, для данного действия!");
+            		    echo('ok');
+                        exit;
+            		}
+    	        }
+        		if($args[0] == '')
+                {
+                    $vk->sendMessage($peer_id, "‼ Используйте: ban [Ник игрока] [ко-во дней] [Причина]");
+                    echo('ok');
+                    exit;
+                }
+                if($args[1] == '')
+                {
+                    $vk->sendMessage($peer_id, "‼ Укажите кол-во дней!");
+                    echo('ok');
+                    exit;
+                }
+                else if($args[1] < 1 || $args[1] > 2048) 
+                {
+                	$vk->sendMessage($peer_id, "⛔Используйте кол-во дней от 1 до 2048");
+                	echo('ok');
+                    exit;
+            	}
+                else if($args[2] == '')
+                {
+                    $vk->sendMessage($peer_id, "‼ Укажите причину!");
+                    echo('ok');
+                    exit;
+                }
+                $RowsPlayer = $db->query("SELECT * FROM players WHERE Name = '$args[0]'");
+                while ($rowP = $RowsPlayer->fetch_assoc()) 
+                {
+                	$is_PlayerID .= $rowP['ID'];
+                	$RowsPlayerAdm = $db->query("SELECT * from player_admin WHERE AppointedID = $id");
+                	while ($rows = $RowsPlayerAdm->fetch_assoc()) 
+                	{
+                		$is_AdminID .= $rows['PlayerID'];
+        		        $db->query("INSERT INTO player_banned (PlayerID, AdminID, Reason, BanTime,UnBanTime) VALUES ('$is_PlayerID', '$is_AdminID','$args[2]',CURRENT_TIMESTAMP(),CURRENT_TIMESTAMP() + INTERVAL '$args[1]' DAY)");
+        		        $vk->sendMessage($peer_id, "✅Аккаунт пользователя {$args[0]} заблокирован на {$args[1]} дней");
+        		        echo('ok');
+                        exit;
+        	        }
+               	}
+            }
+            else if(in_array($cmd, ['getban']))
+            {
+                $RowsPlayerAdm = $db->query("SELECT * from player_admin WHERE AppointedID = $id");
+            	while ($rows = $RowsPlayerAdm->fetch_assoc()) 
+            	{
+            		$is_AdminID .= $rows['PlayerID'];
+            		$is_levelAdmins .= $rows['Level'];
+                    $enumValues = ['Первый уровень','Второй уровень','Третий уровень','Четвертый уровень','Пятый уровень','Заместитель главного администратора','Главный администратор','Разработчик','Santa'];
+
+                    $is_levelAdmin = array_search($is_levelAdmins, $enumValues); // Получаем индекс значения уровня в массиве $enumValues
+                    
+                    if($is_levelAdmin !== false && $is_levelAdmin <= 3) 
+                    {
+            		    $vk->sendMessage($peer_id, "Ваш уровень администратора слишком мал, для данного действия!");
+            		    echo('ok');
+                        exit;
+            		}
+    	        }
+        		if($args[0] == '')
+                {
+                    $vk->sendMessage($peer_id, "‼ Используйте: getban [Ник игрока]");
+                    echo('ok');
+                    exit;
+                }
+                $RowsPlayer = $db->query("SELECT * FROM players WHERE Name = '$args[0]'");
+                $is_ResultIPText;
+                while ($rowP = $RowsPlayer->fetch_assoc()) 
+                {
+                	$is_PlayerID .= $rowP['ID'];
+        
+        	        $RowsPlayerBan = $db->query("SELECT * FROM player_banned WHERE PlayerID = '$is_PlayerID'");
+        			$is_ResultIPText1 = "‼Блокировки пользователя {$args[0]}:\n\n";
+        			while ($rowBan = $RowsPlayerBan->fetch_assoc())
+        			{
+        				$is_CkeckNameAdmins = $rowBan['AdminID'];
+        				$is_NumBlock = $rowBan['ID'];
+        				$is_BanTime = $rowBan['BanTime'];
+        				$is_UnBanTime = $rowBan['UnBanTime'];
+        				$is_Reason = $rowBan['Reason'];
+        				$is_StatusBan = $rowBan['Status'];
+        			 	$RowsPlayerAdmin = $db->query("SELECT * FROM players WHERE ID = '$is_CkeckNameAdmins'");
+        			 	while ($rowBanNAme = $RowsPlayerAdmin->fetch_assoc()) 
+                		{
+        	                $is_NameAdmins = $rowBanNAme['Name'];
+        
+        					$is_ResultIPText = "Заблокирован администратором: {$is_NameAdmins}\nНомер блокировки: {$is_NumBlock}\nДата блокировки: {$is_BanTime}\nДата раблокировки: {$is_UnBanTime}\nПричина раблокировки: {$is_Reason}\nCтатус блокировки: {$is_StatusBan}\n\n$is_ResultIPText";
+        
+        					$is_count ++;
+        				}
+        			}
+        			if($is_count)
+        			{
+        				$vk->sendMessage($peer_id, "$is_ResultIPText1\n\n$is_ResultIPText\n\n⛔Всего у пользователя {$is_count} блокирировок-(ка/ки)");
+        	        	echo('ok');
+        	            exit;
+                    }
+                    else
+                    {
+                    	$vk->sendMessage($peer_id, "⛔ Блокировок не найдено");
+        	        	echo('ok');
+        	            exit;
+                    }
+        		}
+        	}
+        	else if(in_array($cmd, ['unban']))
+            {
+                $RowsPlayerAdm = $db->query("SELECT * from player_admin WHERE AppointedID = $id");
+            	while ($rows = $RowsPlayerAdm->fetch_assoc()) 
+            	{
+            		$is_AdminID .= $rows['PlayerID'];
+            		$is_levelAdmins .= $rows['Level'];
+                    $enumValues = ['Первый уровень','Второй уровень','Третий уровень','Четвертый уровень','Пятый уровень','Заместитель главного администратора','Главный администратор','Разработчик','Santa'];
+
+                    $is_levelAdmin = array_search($is_levelAdmins, $enumValues); // Получаем индекс значения уровня в массиве $enumValues
+                    
+                    if($is_levelAdmin !== false && $is_levelAdmin <= 3) 
+                    {
+            		    $vk->sendMessage($peer_id, "Ваш уровень администратора слишком мал, для данного действия!");
+            		    echo('ok');
+                        exit;
+            		}
+    	        }
+        		if($args[0] == '')
+                {
+                    $vk->sendMessage($peer_id, "‼ Используйте: unban [Номер блокировки из таблицы getban][Причина]");
+                    echo('ok');
+                    exit;
+                }
+                else if($args[1] == '')
+                {
+                    $vk->sendMessage($peer_id, "‼ Вы не указали причину разблокировки");
+                    echo('ok');
+                    exit;
+                }
+                $PlayerUnBan = $db->query("SELECT * FROM player_banned WHERE ID = '$args[0]'");
+        		while ($Rows = $PlayerUnBan->fetch_assoc())
+        		{
+        			$is_PlayerIDBan = $Rows['PlayerID'];
+        			$is_AdminIDBan = $Rows['AdminID'];
+        			$CheckNamePlayerBan = $db->query("SELECT * FROM players WHERE ID = '$is_PlayerIDBan'");
+        			while ($rowBan = $CheckNamePlayerBan->fetch_assoc())
+        			{
+        				$is_PlayerNameBan = $rowBan['Name'];
+        				$RowsPlayerAdm = $db->query("SELECT * from player_admin WHERE AppointedID = $id");
+        	        	while ($rows = $RowsPlayerAdm->fetch_assoc()) 
+        	        	{
+        	        		$is_AdminID = $rows['PlayerID'];
+        					$db->query("UPDATE player_banned SET Status = '3', UnbanID = '$is_AdminID', UnBanReason = '$args[1]' WHERE ID = '$args[0]'  LIMIT 1");
+        				}
+        				$vk->sendMessage($peer_id, "✅Аккаунт пользователя {$is_PlayerNameBan} разблокирован");	
+        			}
+        			echo('ok');
+        		    exit;
+        		}
+        		$vk->sendMessage($peer_id, "‼ Номер блокировки не найден");
+                echo('ok');
+        		exit;
+            }
+            else if(in_array($cmd, ['givemute']))
+            {
+                $RowsPlayerAdm = $db->query("SELECT * from player_admin WHERE AppointedID = $id");
+            	while ($rows = $RowsPlayerAdm->fetch_assoc()) 
+            	{
+            		$is_AdminID .= $rows['PlayerID'];
+            		$is_levelAdmins .= $rows['Level'];
+                    $enumValues = ['Первый уровень','Второй уровень','Третий уровень','Четвертый уровень','Пятый уровень','Заместитель главного администратора','Главный администратор','Разработчик','Santa'];
+
+                    $is_levelAdmin = array_search($is_levelAdmins, $enumValues); // Получаем индекс значения уровня в массиве $enumValues
+                    
+                    if($is_levelAdmin !== false && $is_levelAdmin <= 1) 
+                    {
+            		    $vk->sendMessage($peer_id, "Ваш уровень администратора слишком мал, для данного действия!");
+            		    echo('ok');
+                        exit;
+            		}
+    	        }
+        		if($args[0] == '')
+                {
+                    $vk->sendMessage($peer_id, "‼ Используйте: givemute [Ник][Время][Причина]");
+                    echo('ok');
+                    exit;
+                }
+                else if($args[1] == '')
+                {
+                    $vk->sendMessage($peer_id, "‼ Вы не указали время блокировки чата");
+                    echo('ok');
+                    exit;
+                }
+                else if($args[2] == '')
+                {
+                    $vk->sendMessage($peer_id, "‼ Вы не указали причину блокировки чата");
+                    echo('ok');
+                    exit;
+                }
+                $CheckNamePlayer = $db->query("SELECT * FROM players WHERE Name = '$args[0]'");
+        		while ($rows = $CheckNamePlayer->fetch_assoc())
+        		{
+        			$is_PlayerID = $rows['ID'];
+        	        $is_MuteTime = $args[1]*60;
+        	        $db->query("UPDATE players SET Muted = '1', MuteTime = '$is_MuteTime' WHERE ID = '$is_PlayerID'  LIMIT 1");
+        	        $vk->sendMessage($peer_id, "✅Вы успешно заблокировали чат игроку {$args[0]} на {$args[1]} минут. Причина: {$args[2]}");
+        	        echo('ok');
+        			exit;
+                }
+                $vk->sendMessage($peer_id, "‼ Игрок не найден");
+                echo('ok');
+        		exit;
+            }
+            else if(in_array($cmd, ['resetmute']))
+            {
+                $RowsPlayerAdm = $db->query("SELECT * from player_admin WHERE AppointedID = $id");
+            	while ($rows = $RowsPlayerAdm->fetch_assoc()) 
+            	{
+            		$is_AdminID .= $rows['PlayerID'];
+            		$is_levelAdmins .= $rows['Level'];
+                    $enumValues = ['Первый уровень','Второй уровень','Третий уровень','Четвертый уровень','Пятый уровень','Заместитель главного администратора','Главный администратор','Разработчик','Santa'];
+
+                    $is_levelAdmin = array_search($is_levelAdmins, $enumValues); // Получаем индекс значения уровня в массиве $enumValues
+                    
+                    if($is_levelAdmin !== false && $is_levelAdmin <= 1) 
+                    {
+            		    $vk->sendMessage($peer_id, "Ваш уровень администратора слишком мал, для данного действия!");
+            		    echo('ok');
+                        exit;
+            		}
+    	        }
+        		if($args[0] == '')
+                {
+                    $vk->sendMessage($peer_id, "‼ Используйте: resetmute [Ник][Причина]");
+                    echo('ok');
+                    exit;
+                }
+                else if($args[1] == '')
+                {
+                    $vk->sendMessage($peer_id, "‼ Вы не указали причину разблокировки чата");
+                    echo('ok');
+                    exit;
+                }
+                $CheckNamePlayer = $db->query("SELECT * FROM players WHERE Name = '$args[0]'");
+        		while ($rows = $CheckNamePlayer->fetch_assoc())
+        		{
+        			$is_PlayerID = $rows['ID'];
+        	        $db->query("UPDATE players SET Muted = '0', MuteTime = '0' WHERE ID = '$is_PlayerID'  LIMIT 1");
+        	        $vk->sendMessage($peer_id, "✅Вы успешно разблокировали чат игроку $args[0]. Причина: $args[1]");
+        	        echo('ok');
+        			exit;
+        		}
+        		$vk->sendMessage($peer_id, "‼ Игрок не найден");
+                echo('ok');
+        		exit;
+            }
+            else if(in_array($cmd, ['givejail']))
+            {
+                $RowsPlayerAdm = $db->query("SELECT * from player_admin WHERE AppointedID = $id");
+            	while ($rows = $RowsPlayerAdm->fetch_assoc()) 
+            	{
+            		$is_AdminID .= $rows['PlayerID'];
+            		$is_levelAdmins .= $rows['Level'];
+                    $enumValues = ['Первый уровень','Второй уровень','Третий уровень','Четвертый уровень','Пятый уровень','Заместитель главного администратора','Главный администратор','Разработчик','Santa'];
+
+                    $is_levelAdmin = array_search($is_levelAdmins, $enumValues); // Получаем индекс значения уровня в массиве $enumValues
+                    
+                    if($is_levelAdmin !== false && $is_levelAdmin <= 2) 
+                    {
+            		    $vk->sendMessage($peer_id, "Ваш уровень администратора слишком мал, для данного действия!");
+            		    echo('ok');
+                        exit;
+            		}
+    	        }
+        		if($args[0] == '')
+                {
+                    $vk->sendMessage($peer_id, "‼ Используйте: givejail [Ник][Время][Причина]");
+                    echo('ok');
+                    exit;
+                }
+                else if($args[1] == '')
+                {
+                    $vk->sendMessage($peer_id, "‼ Вы не указали время тюрьмы");
+                    echo('ok');
+                    exit;
+                }
+                else if($args[2] == '')
+                {
+                    $vk->sendMessage($peer_id, "‼ Вы не указали причину");
+                    echo('ok');
+                    exit;
+                }
+                $CheckNamePlayer = $db->query("SELECT * FROM players WHERE Name = '$args[0]'");
+        		while ($rows = $CheckNamePlayer->fetch_assoc())
+        		{
+        			$is_PlayerID = $rows['ID'];
+        	        $is_MuteTime = $args[1]*30;
+        	        $db->query("UPDATE players SET Jailed = '2', JailTime = '$is_MuteTime' WHERE ID = '$is_PlayerID'  LIMIT 1");
+        	        $vk->sendMessage($peer_id, "✅Вы успешно посадили игрока {$args[0]} в тюрьму на {$args[1]} минут. Причина: {$args[2]}");
+        	        echo('ok');
+        			exit;
+                }
+                $vk->sendMessage($peer_id, "‼ Игрок не найден");
+                echo('ok');
+        		exit;
+            }
+            else if(in_array($cmd, ['resetjail']))
+            {
+                $RowsPlayerAdm = $db->query("SELECT * from player_admin WHERE AppointedID = $id");
+            	while ($rows = $RowsPlayerAdm->fetch_assoc()) 
+            	{
+            		$is_AdminID .= $rows['PlayerID'];
+            		$is_levelAdmins .= $rows['Level'];
+                    $enumValues = ['Первый уровень','Второй уровень','Третий уровень','Четвертый уровень','Пятый уровень','Заместитель главного администратора','Главный администратор','Разработчик','Santa'];
+
+                    $is_levelAdmin = array_search($is_levelAdmins, $enumValues); // Получаем индекс значения уровня в массиве $enumValues
+                    
+                    if($is_levelAdmin !== false && $is_levelAdmin <= 2) 
+                    {
+            		    $vk->sendMessage($peer_id, "Ваш уровень администратора слишком мал, для данного действия!");
+            		    echo('ok');
+                        exit;
+            		}
+    	        }
+        		if($args[0] == '')
+                {
+                    $vk->sendMessage($peer_id, "‼ Используйте: resetjail [Ник][Причина]");
+                    echo('ok');
+                    exit;
+                }
+                else if($args[1] == '')
+                {
+                    $vk->sendMessage($peer_id, "‼ Вы не указали причину");
+                    echo('ok');
+                    exit;
+                }
+                $CheckNamePlayer = $db->query("SELECT * FROM players WHERE Name = '$args[0]'");
+        		while ($rows = $CheckNamePlayer->fetch_assoc())
+        		{
+        			$is_PlayerID = $rows['ID'];
+        	        $db->query("UPDATE players SET Jailed = '0', JailTime = '0' WHERE ID = '$is_PlayerID'  LIMIT 1");
+        	        $vk->sendMessage($peer_id, "✅Вы успешно вытащили игрока $args[0] из тюрьмы. Причина: $args[1]");
+        	        echo('ok');
+        			exit;
+        		}
+        		$vk->sendMessage($peer_id, "‼ Игрок не найден");
+                echo('ok');
+        		exit;
+            }
+          	else if(in_array($cmd, ['kick']))
+            {
+                $RowsPlayerAdm = $db->query("SELECT * from player_admin WHERE AppointedID = $id");
+            	while ($rows = $RowsPlayerAdm->fetch_assoc()) 
+            	{
+            		$is_AdminID .= $rows['PlayerID'];
+            		$is_levelAdmins .= $rows['Level'];
+                    $enumValues = ['Первый уровень','Второй уровень','Третий уровень','Четвертый уровень','Пятый уровень','Заместитель главного администратора','Главный администратор','Разработчик','Santa'];
+
+                    $is_levelAdmin = array_search($is_levelAdmins, $enumValues); // Получаем индекс значения уровня в массиве $enumValues
+                    
+                    if($is_levelAdmin !== false && $is_levelAdmin <= 1) 
+                    {
+            		    $vk->sendMessage($peer_id, "Ваш уровень администратора слишком мал, для данного действия!");
+            		    echo('ok');
+                        exit;
+            		}
+    	        }
+        		if($args[0] == '')
+                {
+                    $vk->sendMessage($peer_id, "‼ Используйте: kick [ID игрока из tab][Причина]");
+                    echo('ok');
+                    exit;
+                }
+                else if($args[1] == '')
+                {
+                    $vk->sendMessage($peer_id, "‼ Вы не указали причину!");
+                    echo('ok');
+                    exit;
+                }
+                $PlayerOnlineAdm = $db->query("SELECT * from players WHERE isOnline = '1'");
+        		while ($RowsPlayerOnlineAdm = $PlayerOnlineAdm->fetch_assoc())
+        		{
+        			$is_PlayerID = $RowsPlayerOnlineAdm['ID'];
+        			$is_PlayerName = $RowsPlayerOnlineAdm['Name'];
+        			$PlayerCheckKicks = $db->query("SELECT * from player_admin WHERE AppointedID = $id");
+        			while ($RowsAdm = $PlayerCheckKicks->fetch_assoc())
+        			{
+        				$is_AdminsGameID = $RowsAdm['PlayerID'];
+        				$PlayerAdmNames = $db->query("SELECT * from players WHERE ID = '$is_AdminsGameID'");
+        				while ($RowsAdmGames = $PlayerAdmNames->fetch_assoc())
+        				{	
+        					$is_AdminNames = $RowsAdmGames['Name'];
+        					$db->query("UPDATE players SET KickStatus = '1', KickAdmName = '$is_AdminNames',  KickReason = '$args[1]' WHERE GameID = '$args[0]' LIMIT 1");
+        					$db->query("UPDATE player_admin SET Kick = Kick + 1 WHERE PlayerID = '$is_AdminsGameID' LIMIT 1");
+        					$vk->sendMessage($peer_id, "✅ Вы успешно отключили игрока {$is_PlayerName} от сервера. Причина: {$args[1]}");
+        					echo('ok');
+               				exit;
+        				}
+           			}
+        		}
+        		$vk->sendMessage($peer_id, "‼ Игрока нет в сети или он не авторизовался (зайдите на сервер)");
+                echo('ok');
+                exit;
+            }
+			else if(in_array($cmd, ['tab']))
+			{
+				$is_ResultAllText1 = "👥 Список игроков онлайн:\n\n";
+				$PlayerOnlineAdm = $db->query("SELECT * from players WHERE isOnline = '1'");
+				$is_count = 0;
+				while ($RowsPlayerOnlineAdm = $PlayerOnlineAdm->fetch_assoc())
+				{
+					$is_AllPlayerID = $RowsPlayerOnlineAdm['ID'];
+					$is_AllPlayerName = $RowsPlayerOnlineAdm['Name'];
+					$is_AllPlayerHours = $RowsPlayerOnlineAdm['Hours'];
+					$is_AllPlayerPing = $RowsPlayerOnlineAdm['isPing'];
+					$is_AllPlayerGameID = $RowsPlayerOnlineAdm['GameID'];
+					$is_ResultAllOnlineText = "👤 Игрок {$is_AllPlayerName}[{$is_AllPlayerGameID}]\nЧасов отыграно: {$is_AllPlayerHours}\nПинг: {$is_AllPlayerPing}\n\n$is_ResultAllOnlineText";
+					$is_count ++;
+				}
+				$vk->sendMessage($peer_id, "$is_ResultAllText1\n\n$is_ResultAllOnlineText\n\n⛔Всего в сети {$is_count} игрок-(а/ов)");
+				echo('ok');
+				exit;
+			}
+            else if(in_array($cmd, ['mystat']))
+            {
+        		$RowsPlayerAdms = $db->query("SELECT * from player_admin WHERE AppointedID = $id");
+            	while ($statsrows = $RowsPlayerAdms->fetch_assoc()) 
+            	{
+            		$is_AdminID = $statsrows['PlayerID'];
+            		$is_KDWeek = $statsrows['KD_Week'];
+            		$is_KD_Month = $statsrows['KD_Month'];
+            		$is_KD_Total = $statsrows['KD_Total'];
+            		$is_Mute = $statsrows['Mute'];
+            		$is_Kick = $statsrows['Kick'];
+            		$is_Jail = $statsrows['Jail'];
+            		$is_PM = $statsrows['PM'];
+            		$is_Ban = $statsrows['Ban'];
+            		$is_Data = $statsrows['Data'];
+        
+            		$CheckNamePlayer = $db->query("SELECT * FROM players WHERE ID = '$is_AdminID'");
+        			while ($rowcheckstatName = $CheckNamePlayer->fetch_assoc())
+        			{
+        				$is_PlayerName = $rowcheckstatName['Name'];
+        
+        		    	$vk->sendMessage($peer_id, "✅Ваша статистика ({$is_PlayerName}):\n\nКД за неделю: {$is_KDWeek}\nКД за месяц: {$is_KD_Month}\nКД за все время: {$is_KD_Total}\nВыдано мутов: {$is_Mute}\nКикнуто игроков: {$is_Kick}\nЗаблокировано игроков: {$is_Ban}\nОтветов на вопросы игроков: {$is_PM}\nВыдано тюрьм: {$is_Jail}\nНа посту с: {$is_Data}");
+        		        echo('ok');
+        				exit;
+        			}
+        		}
+            }
+            else if(in_array($cmd, ['admins']))
+            {
+            	if($args[0] == '')
+                {
+                    $vk->sendMessage($peer_id, "‼ Используйте: admins (all | online)");
+                    echo('ok');
+                    exit;
+                }
+            	else if($args[0] == 'all')
+                {
+                	$PlayerOnlineAdm = $db->query("SELECT * from player_admin");
+                	$is_ResultAllText1 = "‼ Список всех администраторов:\n\n";
+        			while ($RowsPlayerOnlineAdm = $PlayerOnlineAdm->fetch_assoc())
+        			{
+        				$is_PlayerIDOnline = $RowsPlayerOnlineAdm['PlayerID'];
+        				$is_PlayerAppointedIDOnline = $RowsPlayerOnlineAdm['AppointedID'];
+        				$is_PlayerAdmLevel = $RowsPlayerOnlineAdm['Level'];
+        				$is_PlayerAdmData = $RowsPlayerOnlineAdm['Data'];
+        				$CheckOnlineNamePlayer = $db->query("SELECT * FROM players WHERE PlayerID = '$is_PlayerIDOnline'");
+        				while ($rowsCheckOnline = $CheckOnlineNamePlayer->fetch_assoc()) 
+                		{
+        	                $is_NameAdmins = $rowsCheckOnline['Name'];
+        
+        	                if($is_PlayerAdmLevel <= 5)
+        	                {
+        						$is_ResultAllText = "Администратор @id{$is_PlayerAppointedIDOnline}({$is_NameAdmins})\nУровень: {$is_PlayerAdmLevel}\nДата назначения: {$is_PlayerAdmData}\n\n$is_ResultAllText";
+        					}
+        	                else if($is_PlayerAdmLevel > 5)
+        	                {
+        						$is_ResultAllText = "Администратор @id{$is_PlayerAppointedIDOnline}({$is_NameAdmins})\nУровень: {$is_PlayerAdmLevel}(6)\nДата назначения: {$is_PlayerAdmData}\n\n$is_ResultAllText";
+        					}
+        					$is_count ++;
+        				}
+        			}
+        			if($is_count)
+        			{
+        				$vk->sendMessage($peer_id, "$is_ResultAllText1\n\n$is_ResultAllText\n\n⛔Всего {$is_count} администратор-(а/ов)");
+        	        	echo('ok');
+        	            exit;
+                    }
+                    else
+                    {
+                    	$vk->sendMessage($peer_id, "⛔ Нет администраторов");
+        	        	echo('ok');
+        	            exit;
+                    }
+                }
+                else if($args[0] == 'online')
+                {
+                	$is_ResultAllText1 = "👥 Список администраторов онлайн:\n\n";
+                	$PlayerOnlineAdm = $db->query("SELECT * from player_admin");
+        			while ($RowsPlayerOnlineAdm = $PlayerOnlineAdm->fetch_assoc())
+        			{
+        				$is_PlayerIDOnline = $RowsPlayerOnlineAdm['PlayerID'];
+        				$is_PlayerAppointedIDOnline = $RowsPlayerOnlineAdm['AppointedID'];
+        				$is_PlayerAdmLevel = $RowsPlayerOnlineAdm['Level'];
+        				$CheckOnlineNamePlayer = $db->query("SELECT * FROM players WHERE PlayerID = '$is_PlayerIDOnline' AND isOnline = '1'");
+        				while ($rowsCheckOnline = $CheckOnlineNamePlayer->fetch_assoc()) 
+                		{
+        	                $is_NameAdmins = $rowsCheckOnline['Name'];
+        
+        	                if($is_PlayerAdmLevel <= 5)
+        	                {
+        						$is_ResultAllText = "👤 Администратор @id{$is_PlayerAppointedIDOnline}({$is_NameAdmins})\nУровень: {$is_PlayerAdmLevel}\n\n$is_ResultAllText";
+        					}
+        	                else if($is_PlayerAdmLevel > 5)
+        	                {
+        						$is_ResultAllText = "👤 Администратор @id{$is_PlayerAppointedIDOnline}({$is_NameAdmins})\nУровень: {$is_PlayerAdmLevel}(6)\n\n$is_ResultAllText";
+        					}
+        					$is_count ++;
+        				}
+        			}
+        			if($is_count)
+        			{
+        				$vk->sendMessage($peer_id, "$is_ResultAllText1\n\n$is_ResultAllText\n\n⛔Всего в сети {$is_count} администратор-(а/ов)");
+        	        	echo('ok');
+        	            exit;
+                    }
+                    else
+                    {
+                    	$vk->sendMessage($peer_id, "⛔ Нет администраторов в сети");
+        	        	echo('ok');
+        	            exit;
+                    }
+                }				
+            }
+    	}
+	    else if ($cmd === 'tab') {
+    $onlinePlayers = $db->query("SELECT * FROM players WHERE isOnline = '1'");
+    $onlinePlayersCount = $onlinePlayers->num_rows;
+
+    $resultText = "👥 Список игроков онлайн:\n\n";
+
+    while ($player = $onlinePlayers->fetch_assoc()) {
+        $playerName = $player['Name'];
+        $playerGameID = $player['GameID'];
+        $playerHours = $player['Hours'];
+        $playerPing = $player['isPing'];
+
+        $resultText .= "👤 Игрок $playerName [$playerGameID]\n";
+        $resultText .= "Часов отыграно: $playerHours\n";
+        $resultText .= "Пинг: $playerPing\n\n";
+    }
+
+    $resultText .= "⛔ Всего в сети $onlinePlayersCount игрок" . ($onlinePlayersCount !== 1 ? "ов" : "а");
+
+    $vk->sendMessage($peer_id, $resultText);
+    echo('ok');
+    exit;
+}
+	    else if(in_array($cmd, ['help']))
+	    {
+			if($chat_id > 0)
+			{
+		    	$vk->sendMessage($peer_id, "
+	    		Список доступных команд:\n
+	    		✅ tab — список игроков на сервере в сети");
+				echo('ok');
+	            exit;
+            }
+        }
+		else if(in_array($cmd, ['pm']))
+	    {
+	        if($chat_id == 8)
+			{
+    			$vk->sendMessage($peer_id, "В данном чате не доступно!");
+    			echo('ok');
+    			exit;
+			}
+			else if($chat_id == 10)
+			{
+			    if($args[0] == '')
+                {
+                    $vk->sendMessage($peer_id, "‼ Используйте: pm [Номер репорта] [Сообщение]");
+                    echo('ok');
+                    exit;
+                }
+                if($args[1] == '')
+                {
+                    $vk->sendMessage($peer_id, "‼ Используйте: pm [Номер репорта] [Сообщение]");
+                    echo('ok');
+                    exit;
+                }
+				//if(!$args[21])
+				//{
+					$PlayerOnlineAdm = $db->query("SELECT * from players WHERE isOnline = '1'");
+					while ($RowsPlayerOnlineAdm = $PlayerOnlineAdm->fetch_assoc())
+					{
+						$is_PlayerID = $RowsPlayerOnlineAdm['ID'];
+						$is_PlayerName = $RowsPlayerOnlineAdm['Name'];
+						$PlayerCheckKicks = $db->query("SELECT * from player_admin WHERE AppointedID = $id");
+						while ($RowsAdm = $PlayerCheckKicks->fetch_assoc())
+						{
+							$is_AdminsGameID = $RowsAdm['PlayerID'];
+							$PlayerAdmNames = $db->query("SELECT * from players WHERE ID = '$is_AdminsGameID'");
+							while ($RowsAdmGames = $PlayerAdmNames->fetch_assoc())
+							{	
+								$is_AdminNames = $RowsAdmGames['Name'];
+								//if($args[2] != '')
+								//{
+								  // $text = urlencode($args[1]);
+								 //  $text = implode(' ', $args[1]);
+								 $text = implode(' ', array_slice($args, 1));
+									$vk->sendMessage($peer_id, "✅ Сообщение отправлено.\n\n* Игроку: $is_PlayerName\nТекст: $text");
+									$db->query("UPDATE players SET PMCheck = '1', PMAdmin = '$is_AdminNames',  TextPM = '$text' WHERE PlayerID = '$args[0]' LIMIT 1");
+									$db->query("UPDATE player_admin SET PM = PM + 1 WHERE PlayerID = '$is_AdminsGameID' LIMIT 1");
+									echo('ok');
+									exit;
+								//}
+							}
+						}
+					//}
+					$vk->sendMessage($peer_id, "‼ Игрока нет в сети или он не авторизовался");
+					echo('ok');
+					exit;
+				}
+				//else
+			//	{
+				//	$vk->sendMessage($peer_id, "‼ В вашем тексте больше 20 пробелов!");
+				//	echo('ok');
+				//	exit;
+			//	}
+			}
+        }
+    }
+    default: echo('ok'), exit;
+}
